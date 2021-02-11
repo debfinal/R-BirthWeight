@@ -1,0 +1,77 @@
+---
+title: "BirthWeight"
+author: "Debasis Roy"
+date: "May 12, 2019"
+output: html_document
+---
+
+```{r knitr-options, echo=FALSE}
+# include this code chunk to set other knitr options
+# note: these options express my preferences, which may differ from yours!
+#    Comment out or change options as you like
+knitr::opts_chunk$set(
+  warning = FALSE,   
+  message = FALSE,
+  tidy=FALSE,     
+  size="small")   
+
+# R global options
+options(digits=4) 
+```
+
+```{r load-packages, echo=FALSE}
+library(vcdExtra)    
+library(ggplot2)
+library(MASS)
+library(gpairs)
+library(car)
+library(effects)
+```
+
+## Q.4 Risk factors for low infant birth weight
+
+4. Risk factors for low infant birth weight: The data set birthwt in the MASS package gives data on 189 babies born at Baystate Medical Center, Springfield, MA during 1986. The quantitative response is bwt (birth weight in grams), and this is also recorded as low, a binary variable corresponding to bwt < 2500 (2.5 Kg). The goal is to study how this varies with the available predictor variables. The variables are all recorded as numeric, so in R it may be helpful to convert some of these into factors and possibly collapse some low frequency categories. The code below is just an example of how you might do this for some variables.
+
+```{r}
+birthwt2 <- within(birthwt, {
+race <- factor(race, labels = c("white", "black", "other"))
+ ptd <- factor(ptl > 0)  
+ ftv <- factor(ftv)      
+ levels(ftv)[-(1:2)] <- "2+"
+ smoke <- factor(smoke>0)
+ ht <- factor(ht>0)
+ ui <- factor(ui>0)
+})
+```
+
+a. Make some exploratory plots showing how low birth weight varies with each of the available predictors. In some cases, it will probably be helpful to  add some sort of smoothed summary curves or lines.
+
+```{r fig.height=10, fig.width=10, fig.show="hold"}
+vars <- c("low", "age", "lwt", "race", "ptd")
+gpairs(birthwt2[,vars],
+diag.pars=list(fontsize=16, hist.color="lightgray"), lower.pars = list(scatter="lm"),
+upper.pars = list(scatter="lm"),
+mosaic.pars=list(gp=shading_Friendly,
+gp_args=list(interpolate=1:4)))
+```
+
+b. Fit several logistic regression models predicting low birth weight from these predictors, with the goal of explaining this phenomenon adequately, yet simply.
+
+```{r}
+bweight.m0 <- glm(low ~ age + lwt + race + smoke + ptd + ht + ui + ftv, data=birthwt2, family = binomial)
+summary(bweight.m0)
+car::Anova(bweight.m0)
+bweight.m1 <- update(bweight.m0, . ~ . - ui - ftv)
+Anova(bweight.m1)
+anova(bweight.m1, bweight.m0, test="Chisq")
+```
+
+c. Use some graphical displays to convey your findings.
+
+```{r fig.height=10, fig.width=20, fig.show="hold"}
+plot(allEffects(bweight.m1), ci.style="bands")
+```
+
+```{r echo=FALSE}
+sessionInfo()  # could use devtools::session_info() if you prefer that
+```
